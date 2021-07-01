@@ -20,11 +20,6 @@ const argv = yargs.options({
         demandOption: false,
         description: 'funding amount to be sent to users'
       },
-    rpcUrl: {
-        alias: 'u',
-        demandOption: false,
-        description: 'RPC URL for the provider'
-      },
       walletsPass: {
         alias: 'p',
         demandOption: false,
@@ -33,7 +28,7 @@ const argv = yargs.options({
 }).argv;
 
 const numTransactions:number = argv.transactions? Number(argv.transactions): 1; 
-const fundingAmount: string = argv.funding? argv.funding: "0.0001";
+const fundingAmount: string = argv.funding? argv.funding: "0.001";
 const walletsPass:string = argv.walletsPass? argv.walletsPass: "Hello-Hello-Khaalo-Jello"; 
 
 const walletsPath = `${__dirname}/wallets`;

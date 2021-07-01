@@ -1,7 +1,7 @@
 import { ethers, Wallet } from "ethers";
-import { toNumber } from './helpers'; 
+import { toNumber,delay } from './helpers'; 
 import * as fs from "fs";
-import { TASK } from './benchmark';
+import { TASK, PRE_TASK, POST_TASK, PROVIDER, FAUCET } from './benchmark';
 const yargs = require('yargs')
 
 // ----------------------------------------------------------------//
@@ -29,27 +29,14 @@ const argv = yargs.options({
         alias: 'p',
         demandOption: false,
         description: 'Password to encrypt wallet'
-      },
-    gasFaucet:{
-      alias: 'g',
-      demandOption: false,
-      description: 'private key of the faucet responsible for providing eth/edg/aUSD for paying gas fee amount to wallets'
-    }
-    
+      },    
 }).argv;
 
 const numTransactions:number = argv.transactions? Number(argv.transactions): 1; 
 const fundingAmount: string = argv.funding? argv.funding: "0.0001";
-const rpcUrl:string = argv.rpcUrl? argv.rpcUrl: "http://127.0.0.1:9000"; 
 const walletsPass:string = argv.walletsPass? argv.walletsPass: "Hello-Hello-Khaalo-Jello"; 
-const faucetKey:string = argv.gasFaucet? argv.gasFaucet:"31eaf7d2584b37409065bb99ec421197bb3ffc90cd900536726a0d6a15f91d80"; 
 
 const walletsPath = `${__dirname}/wallets`;
-
-
-const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
-const walletFaucet = new Wallet(faucetKey, provider);
-
 
 async function createWallets(numWallets: number): Promise<ethers.Wallet[]> {
   const wallets: Wallet[] = [];
@@ -59,7 +46,7 @@ async function createWallets(numWallets: number): Promise<ethers.Wallet[]> {
       to: newWallet.address,
       value: ethers.utils.parseEther(fundingAmount),
     };
-    wallets.push(await newWallet.connect(provider));
+    wallets.push(await newWallet.connect(PROVIDER));
   }
 return wallets;
 }
@@ -80,7 +67,7 @@ async function saveWallets(wallets: Wallet[]) {
 async function initWalletFromFile(walletPath:string): Promise<Wallet>{
   const walletData = fs.readFileSync(walletPath) as any;
   let wallet = await Wallet.fromEncryptedJson(walletData, walletsPass);
-  wallet = await wallet.connect(provider);
+  wallet = await wallet.connect(PROVIDER);
   return wallet;
 }
 
@@ -89,21 +76,20 @@ async function loadWallets(): Promise<Wallet[]> {
     ? fs.readdirSync(walletsPath).length
     : 0;
   const wait = [];
-  if (numWallets > 0) {
-    const fileNames = await fs.readdirSync(walletsPath);
-    let itr = 0;
-    while(itr < Math.min(fileNames.length,numTransactions)) {
-      const filePath = walletsPath + "/" + fileNames[itr];
-      wait.push(initWalletFromFile(filePath));
-      itr++;
-    }
+  if (numWallets == 0) {
+    return [];
   }
-  const wallets: Wallet[] = await Promise.all(wait);
-  return wallets;
+  let fileNames = await fs.readdirSync(walletsPath);
+  fileNames = fileNames.splice(0,Math.min(numTransactions, fileNames.length));
+  await fileNames.forEach(name => {
+    const filePath = walletsPath + "/" + name;
+    wait.push(initWalletFromFile(filePath));
+    })
+  return await Promise.all(wait);
 }
 
 async function validateFunding(wallet: Wallet): Promise<boolean>{
-    const balance = toNumber(await provider.getBalance(wallet.address));
+    const balance = toNumber(await PROVIDER.getBalance(wallet.address));
     return balance >= Number(fundingAmount);
 }
 
@@ -120,7 +106,7 @@ async function fundWallets(wallets: Wallet[]){
         to: _wallet.address,
         value: ethers.utils.parseEther(fundingAmount),
         };
-      const send = await walletFaucet.sendTransaction(tx)
+      const send = await FAUCET.sendTransaction(tx)
       await send.wait();
     }
 }
@@ -154,9 +140,14 @@ async function main(){
     wallets.push(...newWallets);
   }
   
-  console.log("-> Funding wallets...")
+  console.log("-> Funding wallets...");
+
   await fundWallets(wallets);
 
+  console.log("-> Performing Pre-Tasks...");
+  
+  await PRE_TASK(wallets);
+  
   console.log("-> Executing batch transactions...")
   // start time
   var start = process.hrtime()
@@ -168,8 +159,12 @@ async function main(){
   var end = process.hrtime(start)
 
   console.info('Execution time (hr): %ds %dms', end[0], end[1] / 1000000)
-};
 
+  console.log("-> Performing Post-Tasks...");
+
+  await delay(1000) 
+  await POST_TASK();
+};
 
 
 main()

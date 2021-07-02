@@ -15,7 +15,8 @@ yarn # to install dependencies
 # to start benchmarking script
 # here:
 #   -t is the number of transactions you wish to execute. it is set to 1 by default. 
-#   -f is the amount of eth/edg/native asset to transfer to wallets from Faucet before making transactions. It defaults to 0.001, so make sure your Faucet has enough money to make the transfers. 
+#   -f is the amount of eth/edg/native asset to transfer to wallets from Faucet before making transactions.
+    It defaults to 0.001, so make sure your Faucet has enough money to make the transfers. 
 yarn start -t <num_transactions> -f <funding_amount>
 ```
 

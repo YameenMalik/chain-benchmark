@@ -2,7 +2,8 @@ import { ethers, Wallet } from "ethers";
 import { toNumber,delay } from './helpers'; 
 import * as fs from "fs";
 import { TASK, PRE_TASK, POST_TASK, PROVIDER, FAUCET } from './benchmark';
-const yargs = require('yargs')
+import { sys } from "typescript";
+const yargs = require('yargs');
 
 // ----------------------------------------------------------------//
 //                          ARGUMENT PARSER
@@ -31,7 +32,7 @@ const numTransactions:number = argv.transactions? Number(argv.transactions): 1;
 const fundingAmount: string = argv.funding? argv.funding: "0.001";
 const walletsPass:string = argv.walletsPass? argv.walletsPass: "Hello-Hello-Khaalo-Jello"; 
 
-const walletsPath = `${__dirname}/wallets`;
+const walletsPath = `${__dirname}/wallets.json`;
 
 async function createWallets(numWallets: number): Promise<ethers.Wallet[]> {
   const wallets: Wallet[] = [];
@@ -47,40 +48,34 @@ return wallets;
 }
 
 async function saveWallets(wallets: Wallet[]) {
-  if (!fs.existsSync(walletsPath)) {
-    console.log("Creating wallets directory");
-    fs.mkdirSync(walletsPath);
-  }
 
-  for (const wallet of wallets) {
-    const completePath = walletsPath + "/" + wallet.address + ".json";
-    const encryptedWallet = await wallet.encrypt(walletsPass);
-    fs.writeFileSync(completePath, encryptedWallet);
-  }
-}
-
-async function initWalletFromFile(walletPath:string): Promise<Wallet>{
-  const walletData = fs.readFileSync(walletPath) as any;
-  let wallet = await Wallet.fromEncryptedJson(walletData, walletsPass);
-  wallet = await wallet.connect(PROVIDER);
-  return wallet;
+  const keys = await wallets.map(w => {
+    return w.privateKey;
+  });
+  fs.writeFileSync(walletsPath, JSON.stringify(keys))
 }
 
 async function loadWallets(): Promise<Wallet[]> {
-  let numWallets: number = fs.existsSync(walletsPath)
-    ? fs.readdirSync(walletsPath).length
-    : 0;
-  const wait = [];
-  if (numWallets == 0) {
+  let walletPvtKeys = [];
+
+  if(fs.existsSync(walletsPath)){
+    try{
+      walletPvtKeys = JSON.parse(fs.readFileSync(walletsPath) as any)
+    } catch (e) {
+      console.log("Error:", e);
+      sys.exit()
+    }
+  }
+
+  if (walletPvtKeys.length == 0) {
     return [];
   }
-  let fileNames = await fs.readdirSync(walletsPath);
-  fileNames = fileNames.splice(0,Math.min(numTransactions, fileNames.length));
-  await fileNames.forEach(name => {
-    const filePath = walletsPath + "/" + name;
-    wait.push(initWalletFromFile(filePath));
-    })
-  return await Promise.all(wait);
+  
+  const wallets: Wallet[] = await walletPvtKeys.map(key => {
+    return new Wallet(key, PROVIDER);
+  })
+
+  return wallets.splice(0, Math.min(wallets.length, numTransactions));
 }
 
 async function validateFunding(wallet: Wallet): Promise<boolean>{
@@ -126,13 +121,13 @@ async function main(){
 
   const walletsToCreate = numTransactions - numWallets;
   if (walletsToCreate > 0) {
+    
     console.log("-> Creating", walletsToCreate, "wallets");
     const newWallets = await createWallets(walletsToCreate);
-
-    console.log("-> Saving wallets!");
-    await saveWallets(newWallets);
-
     wallets.push(...newWallets);
+    
+    console.log("-> Saving wallets!");
+    await saveWallets(wallets);
   }
   
   console.log("-> Funding wallets...");
@@ -144,6 +139,7 @@ async function main(){
   await PRE_TASK(wallets);
   
   console.log("-> Executing batch transactions...")
+
   // start time
   var start = process.hrtime()
 

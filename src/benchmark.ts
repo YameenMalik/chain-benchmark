@@ -26,7 +26,7 @@ export const PRE_TASK = async (wallets: Wallet[]) => {
   for (let itr  = 0; itr< wallets.length; itr++) {
         await DET.connect(FAUCET).transfer(
         wallets[itr].address,
-        toFullDigitStr(100),
+        toFullDigitStr(1000),
         { 'gasLimit': 2000000, 'nonce': nonce +itr }
         );
     }

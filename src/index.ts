@@ -20,18 +20,11 @@ const argv = yargs.options({
         alias: 'f',
         demandOption: false,
         description: 'funding amount to be sent to users'
-      },
-      walletsPass: {
-        alias: 'p',
-        demandOption: false,
-        description: 'Password to encrypt wallet'
-      },    
+      }
 }).argv;
 
 const numTransactions:number = argv.transactions? Number(argv.transactions): 1; 
 const fundingAmount: string = argv.funding? argv.funding: "0.001";
-const walletsPass:string = argv.walletsPass? argv.walletsPass: "Hello-Hello-Khaalo-Jello"; 
-
 const walletsPath = `${__dirname}/wallets.json`;
 
 async function createWallets(numWallets: number): Promise<ethers.Wallet[]> {

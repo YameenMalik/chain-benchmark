@@ -22,3 +22,7 @@ yarn
 yarn start -t <num_transactions> -f <funding_amount>
 ```
 
+
+### To do
+- Refractor the code base and make proper classes/interfaces/types and push it to npm.
+

@@ -10,13 +10,15 @@ Before running the benchmark script, kindly update `benchmark.ts` with appropria
 - **POST_TASK:** The function executes after the benchmarking task and can be used to see status or state of contracts/users.
 
 ```
-yarn # to install dependencies
+# to install dependencies
+yarn 
 
 # to start benchmarking script
 # here:
 #   -t is the number of transactions you wish to execute. it is set to 1 by default. 
 #   -f is the amount of eth/edg/native asset to transfer to wallets from Faucet before making transactions.
-    It defaults to 0.001, so make sure your Faucet has enough money to make the transfers. 
+#      It defaults to 0.001, so make sure your Faucet has enough money to make the transfers. 
+
 yarn start -t <num_transactions> -f <funding_amount>
 ```
 

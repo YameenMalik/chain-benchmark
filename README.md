@@ -13,13 +13,17 @@ Before running the benchmark script, kindly update `benchmark.ts` with appropria
 # to install dependencies
 yarn 
 
-# to start benchmarking script
-# here:
-#   -t is the number of transactions you wish to execute. it is set to 1 by default. 
-#   -f is the amount of eth/edg/native asset to transfer to wallets from Faucet before making transactions.
-#      It defaults to 0.001, so make sure your Faucet has enough money to make the transfers. 
+# to start benchmarking script:
+yarn start -t <num_transactions> -f <funding_amount> -b <benchmark_filepath>
+e.g: yarn start -t 10 -f 0.001 -b .\benchmark_det_transfer.ts
 
-yarn start -t <num_transactions> -f <funding_amount>
+It accepts following params:
+Options:
+      --help           Show help                                       [boolean]
+      --version        Show version number                             [boolean]
+  -b, --benchmarkFile  path of the benchmark file                     [required]
+  -t, --transactions   number of transactions to execute
+  -f, --fundingAmount  funding amount to be sent to users
 ```
 
 

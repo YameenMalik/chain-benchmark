@@ -1,7 +1,6 @@
 import { ethers, Wallet } from "ethers";
 import { toNumber,delay } from './helpers'; 
 import * as fs from "fs";
-import { TASK, PRE_TASK, POST_TASK, PROVIDER, FAUCET } from './benchmark';
 import { sys } from "typescript";
 const yargs = require('yargs');
 
@@ -11,6 +10,11 @@ const yargs = require('yargs');
 
 // argument parser
 const argv = yargs.options({
+    benchmarkFile: {
+      alias: 'b',
+      demandOption: true,
+      description: 'path of the benchmark file'
+    },
     transactions: {
       alias: 't',
       demandOption: false,
@@ -22,12 +26,13 @@ const argv = yargs.options({
         description: 'funding amount to be sent to users'
       }
 }).argv;
-
+const benchmarkFile = argv.benchmarkFile;
 const numTransactions:number = argv.transactions? Number(argv.transactions): 1; 
 const fundingAmount: string = argv.funding? argv.funding: "0.001";
 const walletsPath = `${__dirname}/wallets.json`;
 
-async function createWallets(numWallets: number): Promise<ethers.Wallet[]> {
+
+async function createWallets(numWallets: number, PROVIDER): Promise<ethers.Wallet[]> {
   const wallets: Wallet[] = [];
   for (let i = 0; i < numWallets; i++) {
     const newWallet = Wallet.createRandom();
@@ -48,7 +53,7 @@ async function saveWallets(wallets: Wallet[]) {
   fs.writeFileSync(walletsPath, JSON.stringify(keys))
 }
 
-async function loadWallets(): Promise<Wallet[]> {
+async function loadWallets(PROVIDER): Promise<Wallet[]> {
   let walletPvtKeys = [];
 
   if(fs.existsSync(walletsPath)){
@@ -71,16 +76,16 @@ async function loadWallets(): Promise<Wallet[]> {
   return wallets.splice(0, Math.min(wallets.length, numTransactions));
 }
 
-async function validateFunding(wallet: Wallet): Promise<boolean>{
+async function validateFunding(wallet: Wallet, PROVIDER): Promise<boolean>{
     const balance = toNumber(await PROVIDER.getBalance(wallet.address));
     return balance >= Number(fundingAmount);
 }
 
-async function fundWallets(wallets: Wallet[]){
+async function fundWallets(wallets: Wallet[], PROVIDER, FAUCET){
     for (let i = 0; i < numTransactions; i++) {
       const _wallet = wallets[i];
 
-      if (await validateFunding(_wallet)) {
+      if (await validateFunding(_wallet, PROVIDER)) {
         continue;
       }
 
@@ -94,7 +99,7 @@ async function fundWallets(wallets: Wallet[]){
     }
 }
 
-async function batchTransaction(wallets: Wallet[]){
+async function batchTransaction(wallets: Wallet[], TASK){
     const waits = []
     for(let itr in wallets){
         waits.push(TASK(wallets[itr]));
@@ -103,11 +108,15 @@ async function batchTransaction(wallets: Wallet[]){
 } 
 
 async function main(){
+
+  const { TASK, PRE_TASK, POST_TASK, PROVIDER, FAUCET } = await import(benchmarkFile);
+
+
   console.log("-> Number of transactions to perform:", numTransactions);
 
   console.log("-> Loading existing wallets... This may take some time");
 
-  const wallets: ethers.Wallet[] = await loadWallets();
+  const wallets: ethers.Wallet[] = await loadWallets(PROVIDER);
   const numWallets: number = wallets.length;
 
   console.log("-> Number of existing wallets:", numWallets);
@@ -116,7 +125,7 @@ async function main(){
   if (walletsToCreate > 0) {
     
     console.log("-> Creating", walletsToCreate, "wallets");
-    const newWallets = await createWallets(walletsToCreate);
+    const newWallets = await createWallets(walletsToCreate, PROVIDER);
     wallets.push(...newWallets);
     
     console.log("-> Saving wallets!");
@@ -125,7 +134,7 @@ async function main(){
   
   console.log("-> Funding wallets...");
 
-  await fundWallets(wallets);
+  await fundWallets(wallets, PROVIDER, FAUCET);
 
   console.log("-> Performing Pre-Tasks...");
   
@@ -137,7 +146,7 @@ async function main(){
   var start = process.hrtime()
 
   // call task in batch
-  await batchTransaction(wallets);
+  await batchTransaction(wallets, TASK);
 
   // stop time
   var end = process.hrtime(start)

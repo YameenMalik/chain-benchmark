@@ -3,7 +3,7 @@ import { toNumber, toFullDigitStr } from "./helpers";
 
 import { DETToken__factory } from "../typechain/factories/DETToken__factory"; // det token factory
 const RECEIVER_ADDRESS: string = "0x931d6514C8d5522C7489aad7aCCFfC20E6A92E57"; //alice
-const CONTRACT_ADDRESS = "0x99A53a4eBaBB340Fb3fc3804b5fd81714DF88Dcb"; // det token
+const CONTRACT_ADDRESS = "0xa94077d093eCCA58f622d2C70a296bB7D5393096"; // det token
 
 export const PROVIDER = new ethers.providers.JsonRpcProvider(
   "http://18.210.28.137:8547" // add your rpc url over here
